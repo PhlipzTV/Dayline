@@ -4,13 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#1B1E3D">
-<meta name="description" content="Dayline — Tagesstruktur, Aufgaben mit Fristen und Workline-Kalender">
+<meta name="description" content="Dayline — Tagesstruktur, To-dos mit Fristen und Workline-Kalender">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Dayline">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Dayline — dein Tagesplan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -156,6 +157,20 @@
     font-family:'Inter',sans-serif;
   }
   .add-btn:hover{background:#f5b877;}
+  .quick-add-row{
+    display:flex;gap:8px;margin-bottom:10px;
+  }
+  .quick-add-row input{flex:1;}
+  .quick-add-btn{
+    width:auto;white-space:nowrap;padding:10px 16px;
+  }
+  .details-toggle{
+    background:none;border:none;color:var(--amber);
+    font-family:'JetBrains Mono',monospace;font-size:12px;
+    padding:2px 0;margin-bottom:4px;cursor:pointer;
+  }
+  .details-toggle:hover{text-decoration:underline;}
+  #new-details{margin-top:14px;}
   .btn-ghost{
     background:none;border:1px solid var(--line);color:var(--cream-dim);
     border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;
@@ -283,39 +298,43 @@
   <div class="brand-row"><p class="eyebrow" id="date-label">—</p></div>
   <h1>Dayline</h1>
 
-  <p class="section-label" id="task-count">Aufgaben</p>
+  <p class="section-label" id="task-count">To-dos</p>
   <div class="task-list" id="task-list"></div>
 
-  <button class="btn-ghost" id="completed-toggle" style="width:100%;margin-bottom:24px;">Erledigte Aufgaben anzeigen (0)</button>
+  <button class="btn-ghost" id="completed-toggle" style="width:100%;margin-bottom:24px;">Erledigte To-dos anzeigen (0)</button>
   <div class="task-list" id="completed-task-list" style="display:none;margin-top:-14px;"></div>
 
   <div class="add-task">
-    <p class="section-label">Neue Aufgabe</p>
-    <div class="field-row">
-      <input type="text" id="new-title" placeholder="z.B. Wäsche aufhängen" style="width:100%;">
+    <p class="section-label">Neues To-do</p>
+    <div class="field-row quick-add-row">
+      <input type="text" id="new-title" placeholder="Was steht an?" style="width:100%;">
+      <button class="add-btn quick-add-btn" id="add-btn">Hinzufügen</button>
     </div>
-    <div class="field-row">
-      <textarea id="new-desc" placeholder="Beschreibung (optional)"></textarea>
+    <button class="details-toggle" id="details-toggle" type="button">+ Details (Datum, Priorität, Beschreibung)</button>
+    <div id="new-details" style="display:none;">
+      <div class="field-row">
+        <textarea id="new-desc" placeholder="Beschreibung (optional)"></textarea>
+      </div>
+      <div class="field-row">
+        <select id="new-frist-typ" style="width:100%;">
+          <option value="tag" selected>Bestimmter Tag</option>
+          <option value="woche">Wochenaufgabe — fällig bis Sonntag</option>
+          <option value="monat">Monatsaufgabe — fällig bis Monatsende</option>
+        </select>
+      </div>
+      <div class="field-row-inline" id="new-date-row">
+        <input type="date" id="new-date">
+        <input type="time" id="new-deadline">
+        <select id="new-priority">
+          <option value="keine" selected>Keine</option>
+          <option value="niedrig">Niedrig</option>
+          <option value="mittel">Mittel</option>
+          <option value="hoch">Hoch</option>
+        </select>
+      </div>
     </div>
-    <div class="field-row">
-      <select id="new-frist-typ" style="width:100%;">
-        <option value="tag" selected>Bestimmter Tag</option>
-        <option value="woche">Wochenaufgabe — fällig bis Sonntag</option>
-        <option value="monat">Monatsaufgabe — fällig bis Monatsende</option>
-      </select>
-    </div>
-    <div class="field-row-inline" id="new-date-row">
-      <input type="date" id="new-date">
-      <input type="time" id="new-deadline">
-      <select id="new-priority">
-        <option value="keine" selected>Keine</option>
-        <option value="niedrig">Niedrig</option>
-        <option value="mittel">Mittel</option>
-        <option value="hoch">Hoch</option>
-      </select>
-    </div>
-    <button class="add-btn" id="add-btn">Aufgabe hinzufügen</button>
   </div>
+
 
   <div class="quote-card">
     <div class="quote-header">
@@ -335,7 +354,7 @@
     <div class="tl-hour-labels">
       <span>0</span><span>6</span><span>12</span><span>18</span><span>24 Uhr</span>
     </div>
-    <p class="tl-note">Zeigt nur Aufgaben mit Frist heute. Aufgaben mit anderem Datum siehst du oben in der Liste.</p>
+    <p class="tl-note">Zeigt nur To-dos mit Frist heute. To-dos mit anderem Datum siehst du oben in der Liste.</p>
   </div>
 
   <div class="home-row">
@@ -472,8 +491,6 @@ async function loadState(){
     }
   }catch(e){}
   document.getElementById('home-time').value = state.homeTime;
-  const newDateEl = document.getElementById('new-date');
-  if(newDateEl) newDateEl.value = todayStr();
   selectedWorkDate = todayStr();
   render();
   renderCalendar();
@@ -537,12 +554,12 @@ function render(){
   const doneTasks = privateTasks.filter(t=>t.done);
 
   document.getElementById('task-count').textContent =
-    'Aufgaben' + (openTasks.length>0 ? ' — '+openTasks.length+' offen' : (privateTasks.length? ' — alles erledigt' : ''));
+    'To-dos' + (openTasks.length>0 ? ' — '+openTasks.length+' offen' : (privateTasks.length? ' — alles erledigt' : ''));
 
   const list = document.getElementById('task-list');
   list.innerHTML = '';
   if(openTasks.length===0){
-    list.innerHTML = '<div class="empty">'+(privateTasks.length? 'Keine offenen Aufgaben. Gut gemacht!' : 'Noch keine Aufgaben. Leg unten deine erste an.')+'</div>';
+    list.innerHTML = '<div class="empty">'+(privateTasks.length? 'Keine offenen To-dos. Gut gemacht!' : 'Noch keine To-dos. Leg unten dein erstes an.')+'</div>';
   } else {
     const sortedOpen = [...openTasks].sort(sortByDeadline);
     sortedOpen.forEach(task=> list.appendChild(buildTaskCard(task)));
@@ -551,10 +568,10 @@ function render(){
 
   const completedList = document.getElementById('completed-task-list');
   const toggleBtn = document.getElementById('completed-toggle');
-  toggleBtn.textContent = (completedList.style.display==='none' ? 'Erledigte Aufgaben anzeigen (' : 'Erledigte Aufgaben verbergen (')+doneTasks.length+')';
+  toggleBtn.textContent = (completedList.style.display==='none' ? 'Erledigte To-dos anzeigen (' : 'Erledigte To-dos verbergen (')+doneTasks.length+')';
   completedList.innerHTML = '';
   if(doneTasks.length===0){
-    completedList.innerHTML = '<div class="empty">Noch keine erledigten Aufgaben.</div>';
+    completedList.innerHTML = '<div class="empty">Noch keine erledigten To-dos.</div>';
   } else {
     const sortedDone = [...doneTasks].sort(sortByDeadline);
     sortedDone.forEach(task=> completedList.appendChild(buildTaskCard(task)));
@@ -691,33 +708,70 @@ document.getElementById('new-frist-typ').onchange = (e)=>{
   const dateInput = document.querySelector('#new-date-row input[type="date"]');
   dateInput.disabled = (e.target.value !== 'tag');
   if(e.target.value !== 'tag') dateInput.value = '';
-  else dateInput.value = todayStr();
+  else if(!dateInput.value) dateInput.value = todayStr();
 };
+
+document.getElementById('details-toggle').onclick = ()=>{
+  const details = document.getElementById('new-details');
+  const btn = document.getElementById('details-toggle');
+  const willShow = details.style.display === 'none';
+  details.style.display = willShow ? '' : 'none';
+  btn.textContent = willShow ? '– Details ausblenden' : '+ Details (Datum, Priorität, Beschreibung)';
+  if(willShow){
+    const dateEl = document.getElementById('new-date');
+    const fristTypEl = document.getElementById('new-frist-typ');
+    if(fristTypEl.value === 'tag' && !dateEl.value) dateEl.value = todayStr();
+  }
+};
+
+function resetAddForm(){
+  document.getElementById('new-title').value = '';
+  document.getElementById('new-desc').value = '';
+  document.getElementById('new-date').value = '';
+  document.getElementById('new-deadline').value = '';
+  document.getElementById('new-frist-typ').value = 'tag';
+  document.getElementById('new-priority').value = 'keine';
+  document.getElementById('new-details').style.display = 'none';
+  document.getElementById('details-toggle').textContent = '+ Details (Datum, Priorität, Beschreibung)';
+}
 
 document.getElementById('add-btn').onclick = ()=>{
   const titleEl = document.getElementById('new-title');
-  const descEl = document.getElementById('new-desc');
-  const fristTypEl = document.getElementById('new-frist-typ');
-  const dateEl = document.getElementById('new-date');
-  const timeEl = document.getElementById('new-deadline');
-  const priorityEl = document.getElementById('new-priority');
   if(!titleEl.value.trim()) return;
-  const resolved = resolveDeadline(fristTypEl.value, dateEl.value, timeEl.value);
+
+  const detailsVisible = document.getElementById('new-details').style.display !== 'none';
+  let description = '', deadlineType = 'tag', resolved = { date: null, time: null }, priority = 'keine';
+
+  if(detailsVisible){
+    description = document.getElementById('new-desc').value.trim();
+    deadlineType = document.getElementById('new-frist-typ').value;
+    resolved = resolveDeadline(deadlineType, document.getElementById('new-date').value, document.getElementById('new-deadline').value);
+    priority = document.getElementById('new-priority').value;
+  }
+
   state.tasks.push({
     id: 'task_'+Date.now()+'_'+Math.floor(Math.random()*1000),
     title: titleEl.value.trim(),
-    description: descEl.value.trim(),
-    deadlineType: fristTypEl.value,
+    description,
+    deadlineType,
     deadlineDate: resolved.date,
     deadlineTime: resolved.time,
-    priority: priorityEl.value,
+    priority,
     done: false
   });
-  titleEl.value = ''; descEl.value = ''; dateEl.value = todayStr(); timeEl.value = ''; priorityEl.value = 'keine';
-  fristTypEl.value = 'tag'; dateEl.disabled = false;
+
+  resetAddForm();
   saveState();
   render();
+  titleEl.focus();
 };
+
+document.getElementById('new-title').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    document.getElementById('add-btn').click();
+  }
+});
 
 document.getElementById('completed-toggle').onclick = ()=>{
   const completedList = document.getElementById('completed-task-list');
@@ -761,7 +815,7 @@ function checkReminders(){
     const slot = Math.floor(nowMin/20);
     const key = 'home-nudge-'+slot;
     if(!notified[key]){
-      showToast('Feierabend erreicht', openToday.length+' Aufgabe(n) für heute noch offen.');
+      showToast('Feierabend erreicht', openToday.length+' To-do(s) für heute noch offen.');
       notified[key] = true;
     }
   }
