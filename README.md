@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/29959167/README.md)
+[README.md](https://github.com/user-attachments/files/29975113/README.md)
 # Dayline
 
 Eine installierbare Web-App (PWA) für Tagesstruktur, Aufgaben mit Fristen, motivierende Zitate und einen Workline-Kalender für Arbeits-To-dos.
