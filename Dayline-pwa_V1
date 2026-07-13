@@ -1,0 +1,1029 @@
+# Dayline
+
+Eine installierbare Web-App (PWA) für Tagesstruktur, Aufgaben mit Fristen, motivierende Zitate und einen Workline-Kalender für Arbeits-To-dos.
+
+## Auf GitHub veröffentlichen (GitHub Pages)
+
+1. Erstelle auf github.com ein neues, öffentliches Repository (z. B. `dayline`).
+2. Lade **alle Dateien aus diesem Ordner** hoch (nicht den Ordner selbst, sondern seinen Inhalt):
+   - `index.html`
+   - `manifest.json`
+   - `service-worker.js`
+   - `icons/icon-192.png`
+   - `icons/icon-512.png`
+   - `icons/apple-touch-icon.png`
+
+   Das geht entweder direkt im Browser über "Add file → Upload files" (Ordnerstruktur bleibt beim Ziehen-und-Ablegen erhalten) oder per Git:
+   ```
+   git init
+   git add .
+   git commit -m "Dayline PWA"
+   git branch -M main
+   git remote add origin https://github.com/DEIN-NUTZERNAME/dayline.git
+   git push -u origin main
+   ```
+3. Im Repository zu **Settings → Pages** gehen.
+4. Unter "Build and deployment" als Source **"Deploy from a branch"** wählen, Branch **main**, Ordner **/ (root)**, dann **Save**.
+5. Nach ein bis zwei Minuten ist die App erreichbar unter:
+   `https://DEIN-NUTZERNAME.github.io/dayline/`
+
+## App installieren
+
+- **Android / Desktop (Chrome, Edge):** Seite öffnen → es erscheint ein Installations-Icon in der Adressleiste oder ein Banner "App installieren".
+- **iPhone (Safari):** Seite öffnen → Teilen-Symbol → "Zum Home-Bildschirm".
+
+Danach startet Dayline wie eine eigene App, ohne Browser-Adressleiste.
+
+## Wichtig zu wissen: Datenspeicherung
+
+Deine Aufgaben werden lokal im Browser gespeichert (`localStorage`). Das bedeutet:
+
+- Die Daten bleiben erhalten, solange du dieselbe Website im selben Browser auf demselben Gerät nutzt.
+- Sie werden **nicht** automatisch zwischen mehreren Geräten synchronisiert (z. B. Handy und Laptop sehen unterschiedliche Aufgabenlisten).
+- Löschst du die Browserdaten/den Cache, gehen auch die gespeicherten Aufgaben verloren.
+
+Für eine geräteübergreifende Synchronisierung bräuchte es später ein echtes Backend (z. B. eine kleine Datenbank), das ist mit reinem HTML/JS auf GitHub Pages nicht möglich.
+
+## Push-Benachrichtigungen
+
+Auch als installierte PWA gilt: Erinnerungen erscheinen nur, solange die App geöffnet ist. Echte Push-Benachrichtigungen bei geschlossener App bräuchten einen eigenen Server, der Nachrichten aktiv verschickt — das ist mit dieser reinen Client-Struktur nicht abgedeckt.
+
+const CACHE_NAME = 'dayline-cache-v1';
+const ASSETS_TO_CACHE = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(() => caches.match('./index.html'));
+    })
+  );
+});
+
+{
+  "name": "Dayline — Tagesplan",
+  "short_name": "Dayline",
+  "description": "Tagesstruktur, Aufgaben mit Fristen, motivierende Zitate und ein Workline-Kalender für Arbeits-To-dos.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1B1E3D",
+  "theme_color": "#1B1E3D",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1B1E3D">
+<meta name="description" content="Dayline — Tagesstruktur, Aufgaben mit Fristen und Workline-Kalender">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dayline">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Dayline — dein Tagesplan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#1B1E3D;
+    --night-2:#242850;
+    --dusk:#4B4E6D;
+    --amber:#F2A65A;
+    --coral:#E8735A;
+    --cream:#FDF6EC;
+    --cream-dim:#B9B4C4;
+    --sage:#8BA888;
+    --line:rgba(253,246,236,0.12);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--night);
+    color:var(--cream);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:32px 16px 80px;
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+  .brand-row{display:flex;align-items:baseline;gap:10px;margin-bottom:2px;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    letter-spacing:0.08em;
+    color:var(--amber);
+    text-transform:uppercase;
+    margin:0;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:32px;
+    margin:0 0 24px;
+    color:var(--cream);
+  }
+  .quote-card{
+    background:var(--night-2);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px 22px;
+    margin-bottom:28px;
+  }
+  .quote-header{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;margin-bottom:14px;
+  }
+  .quote-label{
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.06em;
+    color:var(--cream-dim);text-transform:uppercase;margin:0;
+  }
+  .quote-text{
+    font-family:'Fraunces',serif;
+    font-style:italic;
+    font-weight:500;
+    font-size:18px;
+    line-height:1.5;
+    margin:0 0 10px;
+    color:var(--cream);
+  }
+  .quote-author{font-size:13px;color:var(--cream-dim);margin:0;}
+  .quote-refresh{
+    flex-shrink:0;
+    background:none;border:1px solid var(--line);color:var(--amber);
+    font-size:12px;font-family:'JetBrains Mono',monospace;
+    padding:6px 10px;border-radius:8px;cursor:pointer;
+  }
+  .quote-refresh:hover{border-color:var(--amber);}
+
+  .timeline-section{margin-bottom:32px;}
+  .section-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;letter-spacing:0.06em;
+    color:var(--cream-dim);text-transform:uppercase;margin:0 0 10px;
+  }
+  .timeline{
+    position:relative;height:64px;border-radius:12px;
+    background:linear-gradient(90deg,
+      #2b2f5a 0%, #3a3f70 15%, #6b6a8a 30%, #d8a86a 45%,
+      #f2a65a 55%, #e8735a 68%, #4b4e6d 82%, #1B1E3D 100%);
+    margin:26px 0 38px;overflow:visible;
+  }
+  .tl-hour-labels{
+    display:flex;justify-content:space-between;
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cream-dim);padding:0 2px;
+  }
+  .tl-now{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--cream);}
+  .tl-now::after{
+    content:'jetzt';position:absolute;top:-20px;left:50%;transform:translateX(-50%);
+    font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--night);
+    background:var(--cream);padding:2px 6px;border-radius:4px;white-space:nowrap;
+  }
+  .tl-home{position:absolute;top:6px;bottom:6px;width:2px;background:var(--cream);opacity:0.6;}
+  .tl-home-icon{
+    position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);
+    font-size:11px;color:var(--cream);white-space:nowrap;
+    background:rgba(27,30,61,0.85);padding:2px 6px;border-radius:4px;
+  }
+  .tl-task{
+    position:absolute;top:50%;width:10px;height:10px;border-radius:50%;
+    transform:translate(-50%,-50%);border:2px solid var(--night);cursor:default;
+  }
+  .tl-task.p-hoch{background:var(--coral);}
+  .tl-task.p-mittel{background:var(--amber);}
+  .tl-task.p-niedrig{background:var(--sage);}
+  .tl-task.p-keine{background:var(--dusk);}
+  .tl-task.done{opacity:0.35;}
+  .tl-note{
+    font-size:12px;color:var(--cream-dim);margin:6px 0 0;
+  }
+
+  .home-row{
+    display:flex;align-items:center;gap:10px;
+    background:var(--night-2);border:1px solid var(--line);border-radius:12px;
+    padding:12px 16px;margin-bottom:32px;flex-wrap:wrap;
+  }
+  .home-row label{font-size:14px;color:var(--cream-dim);flex:1;min-width:200px;}
+  input[type="time"], input[type="date"], input[type="text"], select, textarea{
+    background:var(--night);border:1px solid var(--line);color:var(--cream);
+    border-radius:8px;padding:8px 10px;font-family:'Inter',sans-serif;font-size:14px;
+  }
+  input[type="time"], input[type="date"]{font-family:'JetBrains Mono',monospace;}
+  textarea{width:100%;resize:vertical;min-height:44px;font-family:'Inter',sans-serif;}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--amber);outline-offset:1px;}
+
+  .add-task{
+    background:var(--night-2);border:1px solid var(--line);border-radius:14px;
+    padding:18px;margin-bottom:24px;
+  }
+  .add-task input[type="text"]{width:100%;}
+  .field-row{margin-bottom:10px;}
+  .field-row-inline{
+    display:grid;grid-template-columns:1fr 1fr 110px;gap:10px;margin-bottom:12px;
+  }
+  .add-btn{
+    width:100%;background:var(--amber);color:var(--night);border:none;
+    border-radius:8px;padding:10px;font-weight:600;font-size:14px;cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .add-btn:hover{background:#f5b877;}
+  .btn-ghost{
+    background:none;border:1px solid var(--line);color:var(--cream-dim);
+    border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;
+  }
+  .btn-ghost:hover{border-color:var(--cream-dim);color:var(--cream);}
+
+  .task-list{display:flex;flex-direction:column;gap:8px;margin-bottom:24px;}
+  .task-card{
+    background:var(--night-2);border:1px solid var(--line);border-left:3px solid var(--amber);
+    border-radius:10px;padding:12px 14px;
+  }
+  .task-card.p-hoch{border-left-color:var(--coral);}
+  .task-card.p-niedrig{border-left-color:var(--sage);}
+  .task-card.p-keine{border-left-color:var(--dusk);}
+  .task-card.done{opacity:0.5;}
+  .task-row{display:flex;align-items:flex-start;gap:12px;}
+  .task-check{
+    width:20px;height:20px;border-radius:50%;border:2px solid var(--cream-dim);
+    background:none;cursor:pointer;flex-shrink:0;margin-top:2px;
+  }
+  .task-card.done .task-check{background:var(--sage);border-color:var(--sage);}
+  .task-body{flex:1;min-width:0;}
+  .task-title{font-size:14px;margin:0 0 2px;}
+  .task-card.done .task-title{text-decoration:line-through;color:var(--cream-dim);}
+  .task-desc{font-size:13px;color:var(--cream-dim);margin:0 0 4px;line-height:1.4;}
+  .task-meta{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cream-dim);}
+  .task-meta.urgent{color:var(--coral);}
+  .task-actions{display:flex;gap:4px;flex-shrink:0;}
+  .icon-btn{
+    background:none;border:none;color:var(--cream-dim);cursor:pointer;font-size:15px;padding:4px 6px;
+  }
+  .icon-btn:hover{color:var(--amber);}
+  .icon-btn.danger:hover{color:var(--coral);}
+  .empty{
+    text-align:center;color:var(--cream-dim);font-size:14px;padding:24px;
+    border:1px dashed var(--line);border-radius:12px;
+  }
+
+  .edit-panel{
+    margin-top:10px;padding-top:10px;border-top:1px solid var(--line);
+  }
+  .edit-grid{display:grid;grid-template-columns:1fr 1fr 110px;gap:10px;margin-bottom:8px;}
+  .edit-actions{display:flex;gap:8px;justify-content:flex-end;}
+
+  .toast-stack{
+    position:fixed;top:16px;right:16px;display:flex;flex-direction:column;gap:8px;
+    z-index:999;max-width:300px;
+  }
+  .toast{
+    background:var(--coral);color:#3a160c;padding:12px 14px;border-radius:10px;
+    font-size:13px;line-height:1.4;box-shadow:0 6px 20px rgba(0,0,0,0.3);
+    animation:slidein 0.25s ease-out;
+  }
+  .toast b{display:block;font-size:13px;margin-bottom:2px;}
+  @keyframes slidein{from{transform:translateX(20px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+  @media (max-width:480px){
+    .field-row-inline, .edit-grid{grid-template-columns:1fr;}
+  }
+
+  .nav-tabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--line);}
+  .nav-tab{
+    background:none;border:none;color:var(--cream-dim);font-family:'Inter',sans-serif;
+    font-size:14px;font-weight:500;padding:10px 4px;cursor:pointer;
+    border-bottom:2px solid transparent;margin-right:16px;
+  }
+  .nav-tab.active{color:var(--amber);border-bottom-color:var(--amber);}
+  .nav-tab:hover{color:var(--cream);}
+
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .cal-month-label{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin:0;}
+  .cal-nav{font-size:20px;border:1px solid var(--line);border-radius:8px;padding:2px 12px;}
+  .cal-weekdays{
+    display:grid;grid-template-columns:repeat(7,1fr);text-align:center;
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cream-dim);margin-bottom:6px;
+  }
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:24px;}
+  .cal-cell{
+    aspect-ratio:1;background:var(--night-2);border:1px solid var(--line);border-radius:8px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    cursor:pointer;font-size:13px;position:relative;
+  }
+  .cal-cell:hover{border-color:var(--cream-dim);}
+  .cal-cell.empty{background:none;border:none;cursor:default;}
+  .cal-cell.today{border-color:var(--amber);}
+  .cal-cell.selected{background:var(--dusk);}
+  .cal-dot{width:5px;height:5px;border-radius:50%;background:var(--amber);}
+  .cal-day-panel{
+    background:var(--night-2);border:1px solid var(--line);border-radius:14px;padding:18px;
+  }
+
+  .feedback-fab{
+    position:fixed;bottom:20px;right:20px;
+    background:var(--amber);color:var(--night);border:none;border-radius:999px;
+    padding:12px 18px;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
+    cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.35);z-index:900;
+  }
+  .feedback-fab:hover{background:#f5b877;}
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.55);
+    display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;
+  }
+  .modal-box{
+    background:var(--night-2);border:1px solid var(--line);border-radius:14px;
+    padding:22px;max-width:420px;width:100%;
+  }
+  .modal-box h2{
+    font-family:'Fraunces',serif;font-size:20px;margin:0 0 6px;color:var(--cream);
+  }
+  .modal-box p.hint{font-size:13px;color:var(--cream-dim);margin:0 0 14px;}
+  .modal-box textarea{width:100%;min-height:110px;margin-bottom:14px;}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="tab-dayline" data-page="dayline">Dayline</button>
+    <button class="nav-tab" id="tab-workline" data-page="workline">Workline</button>
+  </div>
+
+  <div id="page-dayline">
+
+  <div class="brand-row"><p class="eyebrow" id="date-label">—</p></div>
+  <h1>Dayline</h1>
+
+  <p class="section-label" id="task-count">Aufgaben</p>
+  <div class="task-list" id="task-list"></div>
+
+  <button class="btn-ghost" id="completed-toggle" style="width:100%;margin-bottom:24px;">Erledigte Aufgaben anzeigen (0)</button>
+  <div class="task-list" id="completed-task-list" style="display:none;margin-top:-14px;"></div>
+
+  <div class="add-task">
+    <p class="section-label">Neue Aufgabe</p>
+    <div class="field-row">
+      <input type="text" id="new-title" placeholder="z.B. Wäsche aufhängen" style="width:100%;">
+    </div>
+    <div class="field-row">
+      <textarea id="new-desc" placeholder="Beschreibung (optional)"></textarea>
+    </div>
+    <div class="field-row">
+      <select id="new-frist-typ" style="width:100%;">
+        <option value="tag" selected>Bestimmter Tag</option>
+        <option value="woche">Wochenaufgabe — fällig bis Sonntag</option>
+        <option value="monat">Monatsaufgabe — fällig bis Monatsende</option>
+      </select>
+    </div>
+    <div class="field-row-inline" id="new-date-row">
+      <input type="date" id="new-date">
+      <input type="time" id="new-deadline">
+      <select id="new-priority">
+        <option value="keine" selected>Keine</option>
+        <option value="niedrig">Niedrig</option>
+        <option value="mittel">Mittel</option>
+        <option value="hoch">Hoch</option>
+      </select>
+    </div>
+    <button class="add-btn" id="add-btn">Aufgabe hinzufügen</button>
+  </div>
+
+  <div class="quote-card">
+    <div class="quote-header">
+      <p class="quote-label">Zitat des Tages</p>
+      <button class="quote-refresh" id="quote-refresh">Neues Zitat</button>
+    </div>
+    <p class="quote-text" id="quote-text">—</p>
+    <p class="quote-author" id="quote-author">—</p>
+  </div>
+
+  <div class="timeline-section">
+    <p class="section-label">Heute im Überblick</p>
+    <div class="timeline" id="timeline">
+      <div class="tl-now" id="tl-now"></div>
+      <div class="tl-home" id="tl-home"></div>
+    </div>
+    <div class="tl-hour-labels">
+      <span>0</span><span>6</span><span>12</span><span>18</span><span>24 Uhr</span>
+    </div>
+    <p class="tl-note">Zeigt nur Aufgaben mit Frist heute. Aufgaben mit anderem Datum siehst du oben in der Liste.</p>
+  </div>
+
+  <div class="home-row">
+    <label for="home-time">Wann kommst du normalerweise nach Hause?</label>
+    <input type="time" id="home-time" value="18:00">
+  </div>
+
+  </div>
+
+  <div id="page-workline" style="display:none;">
+
+    <div class="brand-row"><p class="eyebrow">Arbeit</p></div>
+    <h1>Workline</h1>
+    <p class="tl-note" style="margin:0 0 20px;">Trag hier deine Arbeits-To-dos direkt am passenden Kalendertag ein.</p>
+
+    <div class="cal-header">
+      <button class="icon-btn cal-nav" id="cal-prev" aria-label="Vorheriger Monat">‹</button>
+      <p class="cal-month-label" id="cal-month-label">—</p>
+      <button class="icon-btn cal-nav" id="cal-next" aria-label="Nächster Monat">›</button>
+    </div>
+    <div class="cal-weekdays">
+      <span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+
+    <div class="cal-day-panel">
+      <p class="section-label" id="cal-selected-label">Ausgewählter Tag</p>
+      <div class="task-list" id="work-task-list"></div>
+      <div class="field-row-inline" style="grid-template-columns:1fr 110px;">
+        <input type="text" id="new-work-title" placeholder="z.B. Präsentation vorbereiten">
+        <select id="new-work-priority">
+          <option value="keine" selected>Keine</option>
+          <option value="niedrig">Niedrig</option>
+          <option value="mittel">Mittel</option>
+          <option value="hoch">Hoch</option>
+        </select>
+      </div>
+      <button class="add-btn" id="add-work-btn" style="margin-top:10px;">To-do hinzufügen</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast-stack" id="toast-stack"></div>
+
+<button class="feedback-fab" id="feedback-fab">💬 Feedback</button>
+
+<div class="modal-overlay" id="feedback-modal" style="display:none;">
+  <div class="modal-box">
+    <h2>Verbesserungsvorschlag</h2>
+    <p class="hint">Öffnet dein E-Mail-Programm mit einer vorausgefüllten Nachricht an business.kraus@gmail.com. Zum Absenden musst du dort noch auf „Senden" klicken.</p>
+    <textarea id="feedback-text" placeholder="Was können wir besser machen?"></textarea>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="feedback-cancel">Abbrechen</button>
+      <button class="add-btn" id="feedback-send" style="width:auto;padding:8px 16px;">E-Mail öffnen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const QUOTES = [
+  ["Man muss das Unmögliche versuchen, um das Mögliche zu erreichen.", "Hermann Hesse"],
+  ["Der Weg entsteht beim Gehen.", "Franz Kafka"],
+  ["Nicht weil es schwer ist, wagen wir es nicht, sondern weil wir es nicht wagen, ist es schwer.", "Seneca"],
+  ["Kleine Schritte sind besser als Stillstand.", "Unbekannt"],
+  ["Struktur ist die Freiheit, sich nicht ständig entscheiden zu müssen.", "Unbekannt"],
+  ["Erledige die wichtigste Aufgabe zuerst, dann wird der Tag leicht.", "Unbekannt"],
+  ["Ein guter Plan heute ist besser als ein perfekter morgen.", "George S. Patton (frei)"],
+  ["Du musst nicht alles auf einmal schaffen. Du musst nur anfangen.", "Unbekannt"],
+];
+
+let state = { tasks: [], homeTime: "18:00" };
+let notified = {};
+let editingId = null;
+let calDate = new Date();
+let calYear = calDate.getFullYear();
+let calMonth = calDate.getMonth();
+let selectedWorkDate = null;
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function toDateStr(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function endOfWeekStr(){
+  const d = new Date();
+  const day = d.getDay();
+  const diffToSunday = day===0 ? 0 : 7-day;
+  d.setDate(d.getDate()+diffToSunday);
+  return toDateStr(d);
+}
+function endOfMonthStr(){
+  const d = new Date();
+  const last = new Date(d.getFullYear(), d.getMonth()+1, 0);
+  return toDateStr(last);
+}
+function timeToMinutes(t){
+  if(!t) return null;
+  const [h,m] = t.split(":").map(Number);
+  return h*60+m;
+}
+function nowMinutes(){
+  const d = new Date();
+  return d.getHours()*60+d.getMinutes();
+}
+function deadlineDateTime(task){
+  if(!task.deadlineTime) return null;
+  const dateStr = task.deadlineDate || todayStr();
+  return new Date(dateStr+'T'+task.deadlineTime+':00');
+}
+function fmtDate(){
+  const d = new Date();
+  return d.toLocaleDateString('de-DE',{weekday:'long', day:'numeric', month:'long'});
+}
+function fmtDeadline(task){
+  if(!task.deadlineTime) return 'Keine Frist';
+  const prefix = task.deadlineType==='woche' ? 'Wochenaufgabe · ' : task.deadlineType==='monat' ? 'Monatsaufgabe · ' : '';
+  const isToday = (task.deadlineDate || todayStr()) === todayStr();
+  if(isToday) return prefix+'Frist heute, '+task.deadlineTime;
+  const dt = new Date((task.deadlineDate)+'T'+task.deadlineTime+':00');
+  const dateLabel = dt.toLocaleDateString('de-DE',{day:'numeric',month:'short'});
+  return prefix+'Frist '+dateLabel+', '+task.deadlineTime;
+}
+
+async function loadState(){
+  try{
+    const raw = localStorage.getItem('dayline-state');
+    if(raw){
+      const parsed = JSON.parse(raw);
+      state.tasks = parsed.tasks || [];
+      state.homeTime = parsed.homeTime || "18:00";
+    }
+  }catch(e){}
+  document.getElementById('home-time').value = state.homeTime;
+  const newDateEl = document.getElementById('new-date');
+  if(newDateEl) newDateEl.value = todayStr();
+  selectedWorkDate = todayStr();
+  render();
+  renderCalendar();
+  renderWorkTasks();
+}
+async function saveState(){
+  try{ localStorage.setItem('dayline-state', JSON.stringify(state)); }catch(e){}
+}
+
+function showToast(title, body){
+  const stack = document.getElementById('toast-stack');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = '<b>'+title+'</b>'+body;
+  stack.appendChild(t);
+  setTimeout(()=>{ t.remove(); }, 9000);
+}
+
+function pickQuote(){
+  const [text, author] = QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  document.getElementById('quote-text').textContent = '„' + text + '“';
+  document.getElementById('quote-author').textContent = '— ' + author;
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function render(){
+  document.getElementById('date-label').textContent = fmtDate();
+
+  const home = timeToMinutes(state.homeTime);
+  const now = nowMinutes();
+  document.getElementById('tl-now').style.left = (now/1440*100)+'%';
+  const homeEl = document.getElementById('tl-home');
+  homeEl.style.left = (home/1440*100)+'%';
+
+  const timeline = document.getElementById('timeline');
+  timeline.querySelectorAll('.tl-task, .tl-home-icon').forEach(n=>n.remove());
+  const homeIcon = document.createElement('div');
+  homeIcon.className = 'tl-home-icon';
+  homeIcon.textContent = 'Zuhause';
+  homeEl.appendChild(homeIcon);
+
+  const today = todayStr();
+  const privateTasks = state.tasks.filter(t=>t.category!=='arbeit');
+  privateTasks.forEach(task=>{
+    if(task.deadlineTime && (task.deadlineDate||today)===today){
+      const mins = timeToMinutes(task.deadlineTime);
+      const dot = document.createElement('div');
+      dot.className = 'tl-task p-'+(task.priority||'keine')+(task.done?' done':'');
+      dot.style.left = (mins/1440*100)+'%';
+      dot.title = task.title+' ('+task.deadlineTime+')';
+      timeline.appendChild(dot);
+    }
+  });
+
+  const openTasks = privateTasks.filter(t=>!t.done);
+  const doneTasks = privateTasks.filter(t=>t.done);
+
+  document.getElementById('task-count').textContent =
+    'Aufgaben' + (openTasks.length>0 ? ' — '+openTasks.length+' offen' : (privateTasks.length? ' — alles erledigt' : ''));
+
+  const list = document.getElementById('task-list');
+  list.innerHTML = '';
+  if(openTasks.length===0){
+    list.innerHTML = '<div class="empty">'+(privateTasks.length? 'Keine offenen Aufgaben. Gut gemacht!' : 'Noch keine Aufgaben. Leg unten deine erste an.')+'</div>';
+  } else {
+    const sortedOpen = [...openTasks].sort(sortByDeadline);
+    sortedOpen.forEach(task=> list.appendChild(buildTaskCard(task)));
+    attachTaskListeners(list);
+  }
+
+  const completedList = document.getElementById('completed-task-list');
+  const toggleBtn = document.getElementById('completed-toggle');
+  toggleBtn.textContent = (completedList.style.display==='none' ? 'Erledigte Aufgaben anzeigen (' : 'Erledigte Aufgaben verbergen (')+doneTasks.length+')';
+  completedList.innerHTML = '';
+  if(doneTasks.length===0){
+    completedList.innerHTML = '<div class="empty">Noch keine erledigten Aufgaben.</div>';
+  } else {
+    const sortedDone = [...doneTasks].sort(sortByDeadline);
+    sortedDone.forEach(task=> completedList.appendChild(buildTaskCard(task)));
+    attachTaskListeners(completedList);
+  }
+}
+
+function sortByDeadline(a,b){
+  const da = deadlineDateTime(a); const db = deadlineDateTime(b);
+  if(!da && !db) return 0;
+  if(!da) return 1;
+  if(!db) return -1;
+  return da - db;
+}
+
+function buildTaskCard(task){
+  const card = document.createElement('div');
+  card.className = 'task-card p-'+(task.priority||'keine')+(task.done?' done':'');
+
+  let metaText = fmtDeadline(task);
+  let urgent = false;
+  const dt = deadlineDateTime(task);
+  if(dt && !task.done){
+    const diffMin = (dt - new Date())/60000;
+    if(diffMin < 0){ metaText += ' · überfällig'; urgent = true; }
+    else if(diffMin <= 15){ metaText += ' · gleich fällig'; urgent = true; }
+  }
+
+  const isEditing = editingId === task.id;
+
+  card.innerHTML =
+    '<div class="task-row">'+
+      '<button class="task-check" data-id="'+task.id+'"></button>'+
+      '<div class="task-body">'+
+        '<p class="task-title">'+escapeHtml(task.title)+'</p>'+
+        (task.description ? '<p class="task-desc">'+escapeHtml(task.description)+'</p>' : '')+
+        '<p class="task-meta'+(urgent?' urgent':'')+'">'+metaText+'</p>'+
+      '</div>'+
+      '<div class="task-actions">'+
+        '<button class="icon-btn edit-toggle" data-id="'+task.id+'" aria-label="Bearbeiten">✎</button>'+
+        '<button class="icon-btn danger task-del" data-id="'+task.id+'" aria-label="Löschen">✕</button>'+
+      '</div>'+
+    '</div>'+
+    (isEditing ? renderEditPanel(task) : '');
+
+  return card;
+}
+
+function attachTaskListeners(list){
+  list.querySelectorAll('.task-check').forEach(btn=>{
+    btn.onclick = ()=>{
+      const t = state.tasks.find(x=>x.id===btn.dataset.id);
+      if(t){ t.done = !t.done; saveState(); render(); }
+    };
+  });
+  list.querySelectorAll('.task-del').forEach(btn=>{
+    btn.onclick = ()=>{
+      state.tasks = state.tasks.filter(x=>x.id!==btn.dataset.id);
+      if(editingId===btn.dataset.id) editingId=null;
+      saveState(); render();
+    };
+  });
+  list.querySelectorAll('.edit-toggle').forEach(btn=>{
+    btn.onclick = ()=>{
+      editingId = (editingId===btn.dataset.id) ? null : btn.dataset.id;
+      render();
+    };
+  });
+  if(editingId){
+    const saveBtn = list.querySelector('.edit-save');
+    const cancelBtn = list.querySelector('.edit-cancel');
+    const fristTypEl = list.querySelector('#edit-frist-typ');
+    const dateEl = list.querySelector('#edit-date');
+    if(fristTypEl) fristTypEl.onchange = (e)=>{
+      dateEl.disabled = (e.target.value !== 'tag');
+      if(e.target.value !== 'tag') dateEl.value = '';
+    };
+    if(saveBtn) saveBtn.onclick = ()=>{
+      const t = state.tasks.find(x=>x.id===editingId);
+      if(t){
+        t.title = document.getElementById('edit-title').value.trim() || t.title;
+        t.description = document.getElementById('edit-desc').value.trim();
+        const fristTyp = document.getElementById('edit-frist-typ').value;
+        const resolved = resolveDeadline(fristTyp, document.getElementById('edit-date').value, document.getElementById('edit-time').value);
+        t.deadlineType = fristTyp;
+        t.deadlineDate = resolved.date;
+        t.deadlineTime = resolved.time;
+        t.priority = document.getElementById('edit-priority').value;
+      }
+      editingId = null;
+      saveState(); render();
+    };
+    if(cancelBtn) cancelBtn.onclick = ()=>{ editingId = null; render(); };
+  }
+}
+
+function renderEditPanel(task){
+  const ft = task.deadlineType || 'tag';
+  return '<div class="edit-panel">'+
+    '<div class="field-row"><input type="text" id="edit-title" value="'+escapeHtml(task.title)+'" style="width:100%;"></div>'+
+    '<div class="field-row"><textarea id="edit-desc" placeholder="Beschreibung (optional)">'+escapeHtml(task.description||'')+'</textarea></div>'+
+    '<div class="field-row">'+
+      '<select id="edit-frist-typ" style="width:100%;">'+
+        '<option value="tag"'+(ft==='tag'?' selected':'')+'>Bestimmter Tag</option>'+
+        '<option value="woche"'+(ft==='woche'?' selected':'')+'>Wochenaufgabe — fällig bis Sonntag</option>'+
+        '<option value="monat"'+(ft==='monat'?' selected':'')+'>Monatsaufgabe — fällig bis Monatsende</option>'+
+      '</select>'+
+    '</div>'+
+    '<div class="edit-grid">'+
+      '<input type="date" id="edit-date" value="'+(task.deadlineDate||'')+'" '+(ft!=='tag'?'disabled':'')+'>'+
+      '<input type="time" id="edit-time" value="'+(task.deadlineTime||'')+'">'+
+      '<select id="edit-priority">'+
+        '<option value="keine"'+((task.priority==='keine'||!task.priority)?' selected':'')+'>Keine</option>'+
+        '<option value="niedrig"'+(task.priority==='niedrig'?' selected':'')+'>Niedrig</option>'+
+        '<option value="mittel"'+(task.priority==='mittel'?' selected':'')+'>Mittel</option>'+
+        '<option value="hoch"'+(task.priority==='hoch'?' selected':'')+'>Hoch</option>'+
+      '</select>'+
+    '</div>'+
+    '<div class="edit-actions">'+
+      '<button class="btn-ghost edit-cancel">Abbrechen</button>'+
+      '<button class="add-btn edit-save" style="width:auto;padding:8px 14px;">Speichern</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function resolveDeadline(fristTyp, dateVal, timeVal){
+  if(fristTyp==='woche') return { date: endOfWeekStr(), time: timeVal || '23:59' };
+  if(fristTyp==='monat') return { date: endOfMonthStr(), time: timeVal || '23:59' };
+  if(!dateVal) return { date: null, time: null };
+  return { date: dateVal, time: timeVal || '23:59' };
+}
+
+document.getElementById('new-frist-typ').onchange = (e)=>{
+  const dateInput = document.querySelector('#new-date-row input[type="date"]');
+  dateInput.disabled = (e.target.value !== 'tag');
+  if(e.target.value !== 'tag') dateInput.value = '';
+  else dateInput.value = todayStr();
+};
+
+document.getElementById('add-btn').onclick = ()=>{
+  const titleEl = document.getElementById('new-title');
+  const descEl = document.getElementById('new-desc');
+  const fristTypEl = document.getElementById('new-frist-typ');
+  const dateEl = document.getElementById('new-date');
+  const timeEl = document.getElementById('new-deadline');
+  const priorityEl = document.getElementById('new-priority');
+  if(!titleEl.value.trim()) return;
+  const resolved = resolveDeadline(fristTypEl.value, dateEl.value, timeEl.value);
+  state.tasks.push({
+    id: 'task_'+Date.now()+'_'+Math.floor(Math.random()*1000),
+    title: titleEl.value.trim(),
+    description: descEl.value.trim(),
+    deadlineType: fristTypEl.value,
+    deadlineDate: resolved.date,
+    deadlineTime: resolved.time,
+    priority: priorityEl.value,
+    done: false
+  });
+  titleEl.value = ''; descEl.value = ''; dateEl.value = todayStr(); timeEl.value = ''; priorityEl.value = 'keine';
+  fristTypEl.value = 'tag'; dateEl.disabled = false;
+  saveState();
+  render();
+};
+
+document.getElementById('completed-toggle').onclick = ()=>{
+  const completedList = document.getElementById('completed-task-list');
+  completedList.style.display = (completedList.style.display==='none') ? '' : 'none';
+  render();
+};
+
+document.getElementById('home-time').onchange = (e)=>{
+  state.homeTime = e.target.value;
+  saveState();
+  render();
+};
+
+document.getElementById('quote-refresh').onclick = pickQuote;
+
+function checkReminders(){
+  const now = new Date();
+  const home = timeToMinutes(state.homeTime);
+  const nowMin = nowMinutes();
+
+  state.tasks.forEach(task=>{
+    if(task.done || !task.deadlineTime) return;
+    const dt = deadlineDateTime(task);
+    if(!dt) return;
+    const diffMin = Math.round((dt - now)/60000);
+    const key15 = task.id+'-soon';
+    const keyLate = task.id+'-late';
+    if(diffMin <= 15 && diffMin > 0 && !notified[key15]){
+      showToast('Frist naht', '"'+task.title+'" ist in '+diffMin+' Min. fällig.');
+      notified[key15] = true;
+    }
+    if(diffMin <= 0 && !notified[keyLate]){
+      showToast('Frist überschritten', '"'+task.title+'" ist überfällig.');
+      notified[keyLate] = true;
+    }
+  });
+
+  const today = todayStr();
+  const openToday = state.tasks.filter(t=>!t.done && (t.deadlineDate||today)===today);
+  if(home!==null && nowMin >= home && openToday.length>0){
+    const slot = Math.floor(nowMin/20);
+    const key = 'home-nudge-'+slot;
+    if(!notified[key]){
+      showToast('Feierabend erreicht', openToday.length+' Aufgabe(n) für heute noch offen.');
+      notified[key] = true;
+    }
+  }
+  render();
+}
+
+pickQuote();
+loadState();
+setInterval(checkReminders, 30000);
+
+// ---- Workline: Kalender ----
+const MONTH_NAMES = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+function renderCalendar(){
+  document.getElementById('cal-month-label').textContent = MONTH_NAMES[calMonth]+' '+calYear;
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  const firstDay = new Date(calYear, calMonth, 1);
+  const startWeekday = (firstDay.getDay()+6)%7; // Montag = 0
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const todayS = todayStr();
+
+  for(let i=0;i<startWeekday;i++){
+    const empty = document.createElement('div');
+    empty.className = 'cal-cell empty';
+    grid.appendChild(empty);
+  }
+  for(let day=1; day<=daysInMonth; day++){
+    const dateStr = calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell';
+    if(dateStr===todayS) cell.classList.add('today');
+    if(dateStr===selectedWorkDate) cell.classList.add('selected');
+    const hasTasks = state.tasks.some(t=>t.category==='arbeit' && t.deadlineDate===dateStr);
+    cell.innerHTML = '<span>'+day+'</span>'+(hasTasks ? '<span class="cal-dot"></span>' : '');
+    cell.onclick = ()=>{ selectedWorkDate = dateStr; renderCalendar(); renderWorkTasks(); };
+    grid.appendChild(cell);
+  }
+}
+
+function renderWorkTasks(){
+  if(!selectedWorkDate) return;
+  const dt = new Date(selectedWorkDate+'T00:00:00');
+  document.getElementById('cal-selected-label').textContent =
+    dt.toLocaleDateString('de-DE',{weekday:'long', day:'numeric', month:'long'});
+
+  const list = document.getElementById('work-task-list');
+  list.innerHTML = '';
+  const dayTasks = state.tasks.filter(t=>t.category==='arbeit' && t.deadlineDate===selectedWorkDate);
+  if(dayTasks.length===0){
+    list.innerHTML = '<div class="empty">Keine Arbeits-To-dos an diesem Tag.</div>';
+    return;
+  }
+  dayTasks.forEach(task=>{
+    const card = document.createElement('div');
+    card.className = 'task-card p-'+(task.priority||'keine')+(task.done?' done':'');
+    card.innerHTML =
+      '<div class="task-row">'+
+        '<button class="task-check" data-id="'+task.id+'"></button>'+
+        '<div class="task-body"><p class="task-title">'+escapeHtml(task.title)+'</p></div>'+
+        '<div class="task-actions"><button class="icon-btn danger task-del" data-id="'+task.id+'">✕</button></div>'+
+      '</div>';
+    list.appendChild(card);
+  });
+  list.querySelectorAll('.task-check').forEach(btn=>{
+    btn.onclick = ()=>{
+      const t = state.tasks.find(x=>x.id===btn.dataset.id);
+      if(t){ t.done = !t.done; saveState(); renderWorkTasks(); renderCalendar(); }
+    };
+  });
+  list.querySelectorAll('.task-del').forEach(btn=>{
+    btn.onclick = ()=>{
+      state.tasks = state.tasks.filter(x=>x.id!==btn.dataset.id);
+      saveState(); renderWorkTasks(); renderCalendar();
+    };
+  });
+}
+
+document.getElementById('cal-prev').onclick = ()=>{
+  calMonth--; if(calMonth<0){ calMonth=11; calYear--; }
+  renderCalendar();
+};
+document.getElementById('cal-next').onclick = ()=>{
+  calMonth++; if(calMonth>11){ calMonth=0; calYear++; }
+  renderCalendar();
+};
+
+document.getElementById('add-work-btn').onclick = ()=>{
+  const titleEl = document.getElementById('new-work-title');
+  const prioEl = document.getElementById('new-work-priority');
+  if(!titleEl.value.trim()) return;
+  state.tasks.push({
+    id: 'task_'+Date.now()+'_'+Math.floor(Math.random()*1000),
+    title: titleEl.value.trim(),
+    description: '',
+    category: 'arbeit',
+    deadlineType: 'tag',
+    deadlineDate: selectedWorkDate,
+    deadlineTime: '23:59',
+    priority: prioEl.value,
+    done: false
+  });
+  titleEl.value = '';
+  prioEl.value = 'keine';
+  saveState();
+  renderCalendar();
+  renderWorkTasks();
+};
+
+// ---- Tabs ----
+function switchTab(page){
+  document.getElementById('page-dayline').style.display = page==='dayline' ? '' : 'none';
+  document.getElementById('page-workline').style.display = page==='workline' ? '' : 'none';
+  document.getElementById('tab-dayline').classList.toggle('active', page==='dayline');
+  document.getElementById('tab-workline').classList.toggle('active', page==='workline');
+  if(page==='workline'){ renderCalendar(); renderWorkTasks(); }
+}
+document.getElementById('tab-dayline').onclick = ()=> switchTab('dayline');
+document.getElementById('tab-workline').onclick = ()=> switchTab('workline');
+
+// ---- Feedback ----
+const feedbackModal = document.getElementById('feedback-modal');
+document.getElementById('feedback-fab').onclick = ()=>{ feedbackModal.style.display = 'flex'; };
+document.getElementById('feedback-cancel').onclick = ()=>{ feedbackModal.style.display = 'none'; };
+document.getElementById('feedback-send').onclick = ()=>{
+  const textEl = document.getElementById('feedback-text');
+  const message = textEl.value.trim();
+  if(!message){ feedbackModal.style.display = 'none'; return; }
+  const subject = encodeURIComponent('Dayline Feedback');
+  const body = encodeURIComponent(message);
+  window.location.href = 'mailto:business.kraus@gmail.com?subject='+subject+'&body='+body;
+  textEl.value = '';
+  feedbackModal.style.display = 'none';
+  showToast('E-Mail-Programm geöffnet', 'Bitte dort noch auf „Senden" klicken, damit dein Feedback ankommt.');
+};
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+  });
+}
+
+</script>
+</body>
+</html>
