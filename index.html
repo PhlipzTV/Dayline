@@ -34,7 +34,7 @@
     color:var(--cream);
     font-family:'Inter',sans-serif;
     min-height:100vh;
-    padding:32px 16px 80px;
+    padding:calc(48px + env(safe-area-inset-top)) 16px 80px;
   }
   .wrap{max-width:640px;margin:0 auto;}
   .brand-row{display:flex;align-items:baseline;gap:10px;margin-bottom:2px;}
@@ -231,7 +231,11 @@
     .field-row-inline, .edit-grid{grid-template-columns:1fr;}
   }
 
-  .nav-tabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--line);}
+  .nav-tabs{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    margin-top:6px;margin-bottom:28px;border-bottom:1px solid var(--line);
+  }
+  .nav-tabs-left{display:flex;}
   .nav-tab{
     background:none;border:none;color:var(--cream-dim);font-family:'Inter',sans-serif;
     font-size:14px;font-weight:500;padding:10px 4px;cursor:pointer;
@@ -239,6 +243,12 @@
   }
   .nav-tab.active{color:var(--amber);border-bottom-color:var(--amber);}
   .nav-tab:hover{color:var(--cream);}
+  .settings-btn{
+    background:none;border:none;color:var(--cream-dim);
+    font-size:20px;line-height:1;cursor:pointer;
+    padding:8px 4px 10px;margin-bottom:-1px;
+  }
+  .settings-btn:hover{color:var(--amber);}
 
   .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
   .cal-month-label{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin:0;}
@@ -262,13 +272,6 @@
     background:var(--night-2);border:1px solid var(--line);border-radius:14px;padding:18px;
   }
 
-  .feedback-fab{
-    position:fixed;bottom:20px;right:20px;
-    background:var(--amber);color:var(--night);border:none;border-radius:999px;
-    padding:12px 18px;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
-    cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.35);z-index:900;
-  }
-  .feedback-fab:hover{background:#f5b877;}
   .modal-overlay{
     position:fixed;inset:0;background:rgba(0,0,0,0.55);
     display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;
@@ -283,14 +286,25 @@
   .modal-box p.hint{font-size:13px;color:var(--cream-dim);margin:0 0 14px;}
   .modal-box textarea{width:100%;min-height:110px;margin-bottom:14px;}
   .modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+  .settings-list{margin-bottom:6px;}
+  .settings-item{
+    display:block;width:100%;text-align:left;
+    background:var(--night);border:1px solid var(--line);color:var(--cream);
+    padding:13px 14px;border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;
+    cursor:pointer;margin-bottom:8px;
+  }
+  .settings-item:hover{border-color:var(--amber);color:var(--amber);}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <div class="nav-tabs">
-    <button class="nav-tab active" id="tab-dayline" data-page="dayline">Dayline</button>
-    <button class="nav-tab" id="tab-workline" data-page="workline">Workline</button>
+    <div class="nav-tabs-left">
+      <button class="nav-tab active" id="tab-dayline" data-page="dayline">Dayline</button>
+      <button class="nav-tab" id="tab-workline" data-page="workline">Workline</button>
+    </div>
+    <button class="settings-btn" id="settings-btn" aria-label="Einstellungen">⚙</button>
   </div>
 
   <div id="page-dayline">
@@ -357,11 +371,6 @@
     <p class="tl-note">Zeigt nur To-dos mit Frist heute. To-dos mit anderem Datum siehst du oben in der Liste.</p>
   </div>
 
-  <div class="home-row">
-    <label for="home-time">Wann kommst du normalerweise nach Hause?</label>
-    <input type="time" id="home-time" value="18:00">
-  </div>
-
   </div>
 
   <div id="page-workline" style="display:none;">
@@ -400,7 +409,19 @@
 
 <div class="toast-stack" id="toast-stack"></div>
 
-<button class="feedback-fab" id="feedback-fab">💬 Feedback</button>
+<div class="modal-overlay" id="settings-modal" style="display:none;">
+  <div class="modal-box">
+    <h2>Einstellungen</h2>
+    <div class="field-row" style="margin-top:16px;">
+      <label for="home-time" style="display:block;font-size:14px;color:var(--cream-dim);margin-bottom:6px;">Wann kommst du normalerweise nach Hause?</label>
+      <input type="time" id="home-time" value="18:00" style="width:100%;">
+    </div>
+    <button class="btn-ghost" id="settings-feedback-btn" style="width:100%;margin-top:10px;">💬 Feedback geben</button>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="add-btn" id="settings-close" style="width:auto;padding:8px 16px;">Fertig</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="feedback-modal" style="display:none;">
   <div class="modal-box">
@@ -936,9 +957,17 @@ function switchTab(page){
 document.getElementById('tab-dayline').onclick = ()=> switchTab('dayline');
 document.getElementById('tab-workline').onclick = ()=> switchTab('workline');
 
+// ---- Einstellungen ----
+const settingsModal = document.getElementById('settings-modal');
+document.getElementById('settings-btn').onclick = ()=>{ settingsModal.style.display = 'flex'; };
+document.getElementById('settings-close').onclick = ()=>{ settingsModal.style.display = 'none'; };
+
 // ---- Feedback ----
 const feedbackModal = document.getElementById('feedback-modal');
-document.getElementById('feedback-fab').onclick = ()=>{ feedbackModal.style.display = 'flex'; };
+document.getElementById('settings-feedback-btn').onclick = ()=>{
+  settingsModal.style.display = 'none';
+  feedbackModal.style.display = 'flex';
+};
 document.getElementById('feedback-cancel').onclick = ()=>{ feedbackModal.style.display = 'none'; };
 document.getElementById('feedback-send').onclick = ()=>{
   const textEl = document.getElementById('feedback-text');
